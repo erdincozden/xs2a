@@ -29,9 +29,12 @@ import de.adorsys.aspsp.xs2a.service.payment.CreateBulkPaymentService;
 import de.adorsys.aspsp.xs2a.service.payment.ReadSinglePayment;
 import de.adorsys.aspsp.xs2a.spi.service.PaymentSpi;
 import de.adorsys.psd2.xs2a.spi.domain.account.SpiAccountReference;
+import de.adorsys.aspsp.xs2a.spi.service.PaymentSpi;
+import de.adorsys.psd2.xs2a.core.profile.PaymentType;
 import de.adorsys.psd2.xs2a.spi.domain.common.SpiTransactionStatus;
 import de.adorsys.psd2.xs2a.spi.domain.consent.AspspConsentData;
 import de.adorsys.psd2.xs2a.spi.domain.payment.SpiPaymentType;
+import de.adorsys.psd2.xs2a.spi.domain.response.SpiResponse;
 import de.adorsys.psd2.xs2a.spi.domain.response.SpiResponse;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,7 +52,7 @@ import static de.adorsys.aspsp.xs2a.domain.MessageErrorCode.RESOURCE_UNKNOWN_400
 import static de.adorsys.aspsp.xs2a.domain.MessageErrorCode.RESOURCE_UNKNOWN_403;
 import static de.adorsys.aspsp.xs2a.domain.Xs2aTransactionStatus.RCVD;
 import static de.adorsys.aspsp.xs2a.domain.Xs2aTransactionStatus.RJCT;
-import static de.adorsys.aspsp.xs2a.domain.pis.PaymentType.SINGLE;
+import static de.adorsys.psd2.xs2a.core.profile.PaymentType.SINGLE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
@@ -64,6 +67,7 @@ public class PaymentServiceTest {
     private static final String AMOUNT = "100";
     private static final String EXCESSIVE_AMOUNT = "10000";
     private static final Currency CURRENCY = Currency.getInstance("EUR");
+    private static final AspspConsentData ASPSP_CONSENT_DATA = new AspspConsentData();
     private static final String ALLOWED_PAYMENT_PRODUCT = "sepa-credit-transfers";
     private final AspspConsentData ASPSP_CONSENT_DATA = new AspspConsentData();
     private static final TppInfo TPP_INFO = getTppInfo();
@@ -74,10 +78,8 @@ public class PaymentServiceTest {
 
     private final SinglePayment SINGLE_PAYMENT_OK = getSinglePayment(IBAN, AMOUNT);
     private final SinglePayment SINGLE_PAYMENT_NOK_IBAN = getSinglePayment(WRONG_IBAN, AMOUNT);
-    private final SinglePayment SINGLE_PAYMENT_NOK_AMOUNT = getSinglePayment(IBAN, EXCESSIVE_AMOUNT);
 
     private final BulkPayment BULK_PAYMENT_OK = getBulkPayment(SINGLE_PAYMENT_OK, IBAN);
-    private final BulkPayment BULK_PAYMENT_NOT_OK = getBulkPayment(SINGLE_PAYMENT_OK, WRONG_IBAN);
 
     @InjectMocks
     private PaymentService paymentService;
@@ -198,7 +200,7 @@ public class PaymentServiceTest {
         return paymentInitialisationResponse;
     }
 
-    private SinglePayment getSinglePayment(String iban, String amountToPay) {
+    private static SinglePayment getSinglePayment(String iban, String amountToPay) {
         SinglePayment singlePayments = new SinglePayment();
         singlePayments.setEndToEndIdentification(PAYMENT_ID);
         Xs2aAmount amount = new Xs2aAmount();
@@ -212,7 +214,7 @@ public class PaymentServiceTest {
         return singlePayments;
     }
 
-    private Xs2aAccountReference getReference(String iban) {
+    private static Xs2aAccountReference getReference(String iban) {
         Xs2aAccountReference reference = new Xs2aAccountReference();
         reference.setIban(iban);
         reference.setCurrency(CURRENCY);
@@ -220,9 +222,9 @@ public class PaymentServiceTest {
         return reference;
     }
 
-    private SpiAccountReference getSpiReference(String iban) {
-        return new SpiAccountReference(iban, null, null, null, null, CURRENCY);
-    }
+    private BulkPaymentInitiationResponse getBulkResponses(Xs2aTransactionStatus status, MessageErrorCode errorCode) {
+        BulkPaymentInitiationResponse response = new BulkPaymentInitiationResponse();
+        response.setTransactionStatus(status);
 
     private PeriodicPayment getPeriodicPayment(String iban, String amountToPay) {
         PeriodicPayment payment = new PeriodicPayment();
