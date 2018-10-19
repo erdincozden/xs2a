@@ -62,7 +62,7 @@ public class Xs2aPisConsentMapper {
         PisConsentRequest request = new PisConsentRequest();
         request.setPayments(mapToListPisPayment(bulkPayment.getPayments()));
         request.setPaymentProduct(PisPaymentProduct.getByCode(paymentProduct.getCode()).orElse(null));
-        request.setPaymentType(PisPaymentType.BULK);
+        request.setPaymentType(PaymentType.BULK);
         // TODO put real tppInfo data https://git.adorsys.de/adorsys/xs2a/aspsp-xs2a/issues/406
         request.setTppInfo(new CmsTppInfo());
         return request;

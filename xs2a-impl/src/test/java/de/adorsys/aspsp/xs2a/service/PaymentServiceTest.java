@@ -28,13 +28,9 @@ import de.adorsys.aspsp.xs2a.service.mapper.consent.Xs2aPisConsentMapper;
 import de.adorsys.aspsp.xs2a.service.payment.CreateBulkPaymentService;
 import de.adorsys.aspsp.xs2a.service.payment.ReadSinglePayment;
 import de.adorsys.aspsp.xs2a.spi.service.PaymentSpi;
-import de.adorsys.psd2.xs2a.spi.domain.account.SpiAccountReference;
-import de.adorsys.aspsp.xs2a.spi.service.PaymentSpi;
 import de.adorsys.psd2.xs2a.core.profile.PaymentType;
 import de.adorsys.psd2.xs2a.spi.domain.common.SpiTransactionStatus;
 import de.adorsys.psd2.xs2a.spi.domain.consent.AspspConsentData;
-import de.adorsys.psd2.xs2a.spi.domain.payment.SpiPaymentType;
-import de.adorsys.psd2.xs2a.spi.domain.response.SpiResponse;
 import de.adorsys.psd2.xs2a.spi.domain.response.SpiResponse;
 import org.junit.Before;
 import org.junit.Test;
@@ -65,21 +61,11 @@ public class PaymentServiceTest {
     private static final String IBAN = "DE123456789";
     private static final String WRONG_IBAN = "wrong_iban";
     private static final String AMOUNT = "100";
-    private static final String EXCESSIVE_AMOUNT = "10000";
     private static final Currency CURRENCY = Currency.getInstance("EUR");
     private static final AspspConsentData ASPSP_CONSENT_DATA = new AspspConsentData();
-    private static final String ALLOWED_PAYMENT_PRODUCT = "sepa-credit-transfers";
-    private final AspspConsentData ASPSP_CONSENT_DATA = new AspspConsentData();
-    private static final TppInfo TPP_INFO = getTppInfo();
-    private static final PaymentProduct SCT_PAYMENT_PRODUCT = PaymentProduct.SCT;
-
-    private final PeriodicPayment PERIODIC_PAYMENT_OK = getPeriodicPayment(IBAN, AMOUNT);
-    private final PeriodicPayment PERIODIC_PAYMENT_NOK_AMOUNT = getPeriodicPayment(IBAN, EXCESSIVE_AMOUNT);
-
-    private final SinglePayment SINGLE_PAYMENT_OK = getSinglePayment(IBAN, AMOUNT);
-    private final SinglePayment SINGLE_PAYMENT_NOK_IBAN = getSinglePayment(WRONG_IBAN, AMOUNT);
-
-    private final BulkPayment BULK_PAYMENT_OK = getBulkPayment(SINGLE_PAYMENT_OK, IBAN);
+    private static final SinglePayment SINGLE_PAYMENT_OK = getSinglePayment(IBAN, AMOUNT);
+    private static final SinglePayment SINGLE_PAYMENT_NOK_IBAN = getSinglePayment(WRONG_IBAN, AMOUNT);
+    private static final BulkPayment BULK_PAYMENT_OK = getBulkPayment(SINGLE_PAYMENT_OK, IBAN);
 
     @InjectMocks
     private PaymentService paymentService;
@@ -109,17 +95,14 @@ public class PaymentServiceTest {
         when(paymentMapper.mapToTransactionStatus(SpiTransactionStatus.ACCP)).thenReturn(Xs2aTransactionStatus.ACCP);
         when(paymentMapper.mapToTransactionStatus(SpiTransactionStatus.RJCT)).thenReturn(Xs2aTransactionStatus.RJCT);
         when(paymentMapper.mapToTransactionStatus(null)).thenReturn(null);
-        when(paymentMapper.mapToSpiPaymentType(PaymentType.SINGLE)).thenReturn(SpiPaymentType.SINGLE);
-        when(paymentMapper.mapToSpiPaymentType(PaymentType.PERIODIC)).thenReturn(SpiPaymentType.PERIODIC);
-        when(paymentMapper.mapToSpiPaymentType(PaymentType.BULK)).thenReturn(SpiPaymentType.BULK);
         when(paymentMapper.mapToPaymentInitResponseFailedPayment(SINGLE_PAYMENT_NOK_IBAN, RESOURCE_UNKNOWN_400))
             .thenReturn(getPaymentResponse(RJCT, RESOURCE_UNKNOWN_400));
         when(xs2aPisConsentMapper.mapToXs2aPisConsent(any())).thenReturn(getXs2aPisConsent());
 
         //Status by ID
-        when(paymentSpi.getPaymentStatusById(PAYMENT_ID, SpiPaymentType.SINGLE, ASPSP_CONSENT_DATA))
+        when(paymentSpi.getPaymentStatusById(PAYMENT_ID, PaymentType.SINGLE, ASPSP_CONSENT_DATA))
             .thenReturn(new SpiResponse<>(SpiTransactionStatus.ACCP, ASPSP_CONSENT_DATA));
-        when(paymentSpi.getPaymentStatusById(WRONG_PAYMENT_ID, SpiPaymentType.SINGLE, ASPSP_CONSENT_DATA))
+        when(paymentSpi.getPaymentStatusById(WRONG_PAYMENT_ID, PaymentType.SINGLE, ASPSP_CONSENT_DATA))
             .thenReturn(new SpiResponse<>(null, ASPSP_CONSENT_DATA));
         when(createBulkPaymentService.createPayment(BULK_PAYMENT_OK, getBulkPaymentInitiationParameters(), getTppInfoServiceModified(), getXs2aPisConsent()))
             .thenReturn(getValidResponse());
@@ -222,10 +205,6 @@ public class PaymentServiceTest {
         return reference;
     }
 
-    private BulkPaymentInitiationResponse getBulkResponses(Xs2aTransactionStatus status, MessageErrorCode errorCode) {
-        BulkPaymentInitiationResponse response = new BulkPaymentInitiationResponse();
-        response.setTransactionStatus(status);
-
     private PeriodicPayment getPeriodicPayment(String iban, String amountToPay) {
         PeriodicPayment payment = new PeriodicPayment();
         Xs2aAmount amount = new Xs2aAmount();
@@ -285,7 +264,7 @@ public class PaymentServiceTest {
         return tppInfo;
     }
 
-    private BulkPayment getBulkPayment(SinglePayment singlePayment1, String iban) {
+    private static BulkPayment getBulkPayment(SinglePayment singlePayment1, String iban) {
         BulkPayment bulkPayment = new BulkPayment();
         bulkPayment.setPayments(Collections.singletonList(singlePayment1));
         bulkPayment.setRequestedExecutionDate(LocalDate.now());
@@ -298,7 +277,6 @@ public class PaymentServiceTest {
     private Xs2aPisConsent getXs2aPisConsent() {
         return new Xs2aPisConsent("TEST");
     }
-
 
     private PaymentInitiationParameters getBulkPaymentInitiationParameters() {
         PaymentInitiationParameters requestParameters = new PaymentInitiationParameters();
